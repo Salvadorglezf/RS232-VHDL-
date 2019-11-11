@@ -14,33 +14,33 @@ use IEEE.STD_LOGIC_1164.ALL;
 
 
 
-entity uart_tx is
+entity prueba_tx is
     Port ( ready : in STD_LOGIC;
-           tx_data : in STD_LOGIC_VECTOR (3 downto 0);
+           tx_data : in STD_LOGIC_VECTOR (7 downto 0);
            clk : in STD_LOGIC;
            clr : in STD_LOGIC;
            txd : out STD_LOGIC;
            shift1:out std_logic;
            tdre : out STD_LOGIC);
-end uart_tx;
+end prueba_tx;
 
-architecture Behavioral of uart_tx is
+architecture Behavioral of prueba_tx is
 
 type estado is (mark,start,delay,shift,stop);
 signal present_state: estado:=mark;
 
-signal txbuff: std_logic_vector ( 5 downto 0 );
+signal txbuff: std_logic_vector ( 9 downto 0 );
 
 signal reset_cuenta: boolean:=false;
 signal baud_count: boolean; -- cuenta bauds
-signal bit_time: integer range 0 to 5; --tiempo de bit
+signal bit_time: integer range 0 to 2600; --tiempo de bit
 
-signal bit_count,aux: integer range 0 to 5; -- cuenta numero de bits
+signal bit_count,aux: integer range 0 to 9; -- cuenta numero de bits
 signal bit_tx: boolean; -- bandera de byte transmitido
 signal bit_tx_process: boolean; -- bandera byte en proceso de transmision
 
 signal no_variable,simon,fin,limpia: boolean;
-signal tiempo: integer range 0 to 5; --tiempo de bit
+signal tiempo: integer range 0 to 2600; --tiempo de bit
 
 
 
@@ -118,7 +118,7 @@ process (present_state)
             
 --          txbuff<="100000";
             tdre<='1';
-            txd<=txbuff(5);
+            txd<=txbuff(9);
             shift1<='0';
             no_variable<=true;
             
@@ -175,7 +175,7 @@ process (present_state)
         
                when stop =>
             
-             txd<=txbuff(5);
+             txd<=txbuff(9);
              tdre<='0';
              shift1<='0';
              no_variable<=true;
@@ -219,14 +219,14 @@ process (clk)
 
        if(no_variable) then
        bit_count<=0;
-       txbuff<="100000";
-        txbuff( 4 downto 1)<=tx_data( 3 downto 0);
+       txbuff<="1000000000";
+        txbuff( 8 downto 1)<=tx_data( 7 downto 0);
       
        
        elsif(simon) then
       bit_count<=bit_count+1;
       
-       txbuff(3 downto 0) <=txbuff(4 downto 1); 
+       txbuff(7 downto 0) <=txbuff(8 downto 1); 
                
        end if;
        end if;
@@ -255,11 +255,11 @@ process (clk)
 
 
 --Definicion de los tiempos
-baud_count <= true when bit_time = 5 else false;
-bit_tx <= true when bit_count = 4 else false; 
+baud_count <= true when bit_time = 2600 else false;
+bit_tx <= true when bit_count = 8 else false; 
 
 
-fin <= true when tiempo = 5 else false;
+fin <= true when tiempo = 2600 else false;
 
 
 
