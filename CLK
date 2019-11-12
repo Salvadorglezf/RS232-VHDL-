@@ -1,0 +1,40 @@
+
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
+
+
+entity clk is
+         Port ( mclk,clr: in STD_LOGIC;
+                clk25: out std_logic;
+                 clk190: out std_logic);
+end clk;
+
+architecture Behavioral of clk is
+signal q : std_logic_vector(25 downto 0);
+signal q1 : std_logic_vector(1 downto 0);
+
+begin
+--Divirsor de frecuencia 190Hz
+ divider: process(mclk,clr)
+         begin
+           if (clr = '1') then
+              q<=(others=>'0');
+            elsif(mclk' event and mclk='1') then
+                q<=q+1;
+               end if;
+             end process divider;
+         clk190<=q(17);
+         
+--Divirsor de frecuencia 25Mhz
+ div: process(mclk,clr)
+         begin
+           if (clr = '1') then
+              q1<=(others=>'0');
+            elsif(mclk' event and mclk='1') then
+                q1<=q1+1;
+               end if;
+             end process div;
+         clk25<=q1(1);
+
+end Behavioral;
