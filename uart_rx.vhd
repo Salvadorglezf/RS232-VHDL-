@@ -1,8 +1,5 @@
-
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
-
-
 
 entity uart_rx is
     Port ( rxd,rdrf_clr : in STD_LOGIC;
@@ -16,91 +13,71 @@ end uart_rx;
 
 architecture Behavioral of uart_rx is
 
-type estado is (mark,start,delay,shift,stop,rx_complete);
-signal present_state: estado:=mark;
+type estado is (mark,start,delay,shift,stop,rx_complete); --Definimos los estados a utilizar
+signal present_state: estado:=mark;                       --Asociamos la variable estado
 
-signal rxbuff: std_logic_vector ( 7 downto 0 );
-
+signal rxbuff: std_logic_vector ( 7 downto 0 );         --Creamos un buffer donde se almacenaran los bytes recibidos
 signal reset_cuenta,reset_half: boolean:=false;
-signal baud_count,half_baud_count: boolean; --- cuenta bauds
-signal bit_time: integer range 0 to 2600; --tiempo de bit
-signal half_bit_time: integer range 0 to 1300; --mitad tiempo de bit
-signal bit_count,aux: integer range 0 to 7; -- cuenta numero de bits
-signal bit_tx: boolean; -- bandera de byte transmitido
-signal bit_tx_process: boolean; -- bandera byte en proceso de transmision
-
+signal baud_count,half_baud_count: boolean;             --- cuenta bauds
+signal bit_time: integer range 0 to 2600;               --tiempo de bit para contar hasta 2600 -> 104us/40ns
+signal half_bit_time: integer range 0 to 1300;          --mitad tiempo de bit 2600/2 = 1300
+signal bit_count,aux: integer range 0 to 7;             -- cuenta numero de bits para contar hasta 8 bits
+signal bit_tx: boolean;                                 -- bandera de byte transmitido
+signal bit_tx_process: boolean;                         -- bandera byte en proceso de transmision
 signal no_variable,simon,fin,limpia,salida: boolean;
-signal tiempo: integer range 0 to 2600; --tiempo de bit
-
+signal tiempo: integer range 0 to 2600;                 --tiempo de bit
 
 begin
-
-
 
 --------------Definimos maquina de estados----------------
 process (clr)
     begin 
         if (clr='1') then 
-        present_state <= mark;
-        
+        present_state <= mark;     
         
         elsif (rising_edge (clk))then
          
-            CASE present_state IS
+        CASE present_state IS
             
-            when mark =>
+           when mark =>
             
-            if rxd='0' then
+            if rxd='0' then --si transmitimos algo entonces pasa al siguiente estado
             present_state<=start;
+            end if;                
+                
+          when start=>
+            
+            if ( half_baud_count ) then --a partir de 52us empieza a monitorear la llegada de bits
+            present_state<=delay;
             end if;
+           
+          when delay =>                
                 
-                
-            when start=>
+            if ( bit_tx and baud_count) then --si ya se recibieron los 8 bits entonces pasa al siguiente estado
+            present_state<=stop;            --pasa al estado de stop para continuar con el proceso 
             
-            if ( half_baud_count ) then 
-              present_state<=delay;
-              end if;
-
+            elsif ( baud_count ) then --si aun no se reciben los 8 bits 
+            present_state<=shift;     --sigue almacenando en shift
+            end if;          
                 
-            when delay =>
-                
-            
-                
-                if ( bit_tx and baud_count) then 
-              present_state<=stop;
-              
-               elsif ( baud_count ) then 
-              present_state<=shift;
-              end if;
-              
-  
-            
-                
-            when shift => 
-             present_state <= delay;
-         
-
-             when stop =>
-             
-             if rxd<='1' then
-             present_state<=rx_complete;
-             end if;
-             
---               
-             
-            
-              when rx_complete =>
-              
-              if rdrf_clr='1' then
-              present_state<=mark;
-              end if;
-              
-              
-              
-             
+          when shift => --realiza el registro de corrimiento
       
-            end CASE;
-       end if;
+            present_state <= delay;
+         
+          when stop =>
+             
+            if rxd<='1' then --si ya termino de recibir el byte 
+            present_state<=rx_complete; --pasa al estado siguiente
+            end if;
+           
+          when rx_complete => --Termina el ciclo de maquina
+             
+            if rdrf_clr='1' then   --si ya se encuentra disponible para recibir nuevos datos
+            present_state<=mark;    --pasa al estado mark para empezar de nuevo el proceso
+            end if;    
+      
+        end CASE;
+     end if;
 end process;
         
 ---------------------------------------------------
@@ -108,103 +85,64 @@ process (present_state)
     begin
         case present_state is
         
-            WHEN mark =>
+          WHEN mark =>
            
             shift1<='0';
-            no_variable<=true;
+            no_variable<=true;          
+            rdrf<='0';            --el proceso de transmision se hace 0
             
-            rdrf<='0';
-            
-            
-             simon<=false;
-             
-             reset_half<=true;
-                 
-           
-       
+            simon<=false;             
+            reset_half<=true;        
                
-               
-            WHEN start =>
-            
-             
-              reset_cuenta <= true; 
-              
-              shift1<='0';
-              
-                  no_variable<=true;
-                  
-                    reset_half<=false;
-                     rdrf<='0';
-                 
-             simon<=false;
-             
-       
+          WHEN start =>
+                       
+            reset_cuenta <= true;               
+            shift1<='0';
                 
-            WHEN delay =>
-               
-               
-              reset_cuenta <= false;
-              
-              no_variable<=false;
-             simon<=false;
-              
-              shift1<='0';
-              
-              limpia<=true;
-              
-               rdrf<='0';
-               
-                           rxbuff(7) <= rxd;  
+            no_variable<=true;
+                  
+            reset_half<=false;
+            rdrf<='0';                 
+            simon<=false;
+                
+          WHEN delay =>
 
+            reset_cuenta <= false;
+            shift1<='0';            
 
+            no_variable<=false;
+            simon<=false;     
+            limpia<=true;          
+            rdrf<='0';               
+            rxbuff(7) <= rxd;  
 
+          WHEN shift =>
 
-            WHEN shift =>
+            rdrf<='0';
+            shift1<='0';
+            reset_cuenta <= true;
+              
+            simon<=true;
+            no_variable<=false;
+ 
+          when stop =>
             
---             rxbuff(3) <= rxd; --almacena el bit en la ultima posición
-----               rxbuff(3 downto 0)<=rxbuff(3 downto 0);
-
-              rdrf<='0';
-              shift1<='0';
-              reset_cuenta <= true;
-              
-              simon<=true;
-              no_variable<=false;
---               rx_data<=rxbuff; 
-
-        
-               when stop =>
+            rdrf<='1';      --Termina de recibir el byte
+            shift1<='0';
+            no_variable<=true;
+            simon<=false;
+            rx_data<=rxbuff;
             
-              rdrf<='1';
-             shift1<='0';
-             no_variable<=true;
-             simon<=false;
-                            rx_data<=rxbuff; ---CON ESTE FUNCIONABA
-                             
-                             
-
-             
---             if rxd='0' then
---             fe<='1';
---             end if;
-             
-              
-             
            when rx_complete =>
              rdrf<='0';
              shift1<='1';
              no_variable<=true;
              simon<=false;
-            
-           
-          
-              
-               
+                        
         end case;
 end process;
 
 ------END MAQUINA DE ESTADOS--------
-
 
 --contador
 process (clk)
@@ -214,7 +152,6 @@ process (clk)
             
             if reset_cuenta then 
             bit_time <= 0;
-            
             else 
             bit_time <= bit_time + 1;
             end if;
