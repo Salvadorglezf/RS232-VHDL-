@@ -15,7 +15,7 @@ use IEEE.STD_LOGIC_1164.ALL;
 
 
 entity prueba_tx is
-    Port ( ready : in STD_LOGIC;
+    Port ( ready,rdrf_clr : in STD_LOGIC;
            tx_data : in STD_LOGIC_VECTOR (7 downto 0);
            clk : in STD_LOGIC;
            clr : in STD_LOGIC;
@@ -66,7 +66,7 @@ process (clr)
             CASE present_state IS
             
             when mark =>
-            if ready='1' then
+            if ready='1' or rdrf_clr='1' then
             present_state<=start;
             end if;
                 
@@ -182,6 +182,8 @@ process (present_state)
              simon<=false;
              
              limpia<=false;
+             
+            
              
           
               
