@@ -1,5 +1,5 @@
 
-
+---
 
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
@@ -39,17 +39,23 @@ signal buffer1:std_logic_vector(7 downto 0);
 
 begin
 
-process
-begin
-if btnd='1' then
 
-buffer1<=tx_data;
+with btnd select
+			buffer1 <= tx_data when '1', --1
+			         rx_data when others;	--0
 
-else
-buffer1<=rx_data;
-end if;
-end process;
+--process (mclk)
+--begin
+--   if (rising_edge(mclk)) then 
+--if btnd='1' then
 
+--buffer1<=tx_data;
+
+--else
+--buffer1<=rx_data;
+--end if;
+--end if;
+--end process;
 
 
 --ledclk<=clk25;
@@ -91,7 +97,9 @@ Inst_prueba_tx: entity work.prueba_tx PORT MAP(
   clr=>clr,
   tdre=>tdre,
   ready=>ready,
-  tx_data=>tx_data,
+  tx_data=>buffer1,
+  rdrf_clr=>rdrf_clr,
+   
 --  shift1=>shift1,
   txd=>txd
 		
@@ -117,9 +125,10 @@ rdrf_clr=>rdrf_clr
 );
 
 Inst_doubble: entity work.doubble PORT MAP(
-inp(7 downto 0)=>rx_data,
+
+inp(7 downto 0)=>buffer1,
 inp(8)=>'0',
-cclk=>clk190,
+clk=>mclk,
 clr=>clr,
 an=>an,
 a_to_g=>a_to_g
@@ -129,3 +138,4 @@ a_to_g=>a_to_g
 
 
 end Behavioral;
+
