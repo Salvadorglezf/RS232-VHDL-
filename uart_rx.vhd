@@ -91,9 +91,9 @@ process (clr)
             
               when rx_complete =>
               
---              if rdrf_clr='1' then
---              present_state<=mark;
---              end if;
+              if rdrf_clr='1' then
+              present_state<=mark;
+              end if;
               
               
               
@@ -175,7 +175,7 @@ process (present_state)
         
                when stop =>
             
-              rdrf<='0';
+              rdrf<='1';
              shift1<='0';
              no_variable<=true;
              simon<=false;
@@ -191,7 +191,7 @@ process (present_state)
               
              
            when rx_complete =>
-             rdrf<='1';
+             rdrf<='0';
              shift1<='1';
              no_variable<=true;
              simon<=false;
@@ -279,5 +279,10 @@ half_baud_count <= true when half_bit_time = 1300 else false;
 
 
   
+
+
+
+
+
 end Behavioral;
 
